@@ -1,0 +1,38 @@
+# Builds the firmware on every push and pull request, and attaches the .bin files as downloads.
+name: build firmware
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:v5.4.2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch LovyanGFX (display library, not kept in git)
+        run: sh tools/fetch_lovyangfx.sh
+
+      - name: Build touch version
+        run: |
+          . $IDF_PATH/export.sh
+          rm -rf build sdkconfig
+          idf.py build
+          cp build/mininav.bin mininav-touch.bin
+
+      - name: Build non-touch version
+        run: |
+          . $IDF_PATH/export.sh
+          rm -rf build sdkconfig
+          idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.nontouch" build
+          cp build/mininav.bin mininav-nontouch.bin
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mininav-firmware
+          path: |
+            mininav-touch.bin
+            mininav-nontouch.bin
