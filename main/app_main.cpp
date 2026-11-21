@@ -60,6 +60,7 @@ void app_toggle_night(const char *why) {
 // Touch for Android Auto needs the app rail on screen, so touch on means full screen off. Both
 // change the layout Android Auto is told at connection time, so a live session reconnects.
 void app_toggle_touch(const char *why) {
+    if (CONFIG_AAM_BUTTON_NAV) return;  // no touch panel
     g_app.touch_enabled = !g_app.touch_enabled;
     ESP_LOGI(TAG, "%s -> touch %s", why, g_app.touch_enabled ? "on" : "off");
     save_prefs();
@@ -69,6 +70,7 @@ void app_toggle_touch(const char *why) {
 }
 
 void app_toggle_full(const char *why) {
+    if (CONFIG_AAM_BUTTON_NAV) return;  // the rail stays visible on this build
     if (g_app.touch_enabled) return;  // the rail stays while touch is on
     g_app.full_screen = !g_app.full_screen;
     ESP_LOGI(TAG, "%s -> full screen %s", why, g_app.full_screen ? "on" : "off");
@@ -141,6 +143,11 @@ extern "C" void app_main(void) {
         if (nvs_get_u8(h, "full", &v) == ESP_OK) g_app.full_screen = v;
         nvs_close(h);
     }
+#if CONFIG_AAM_BUTTON_NAV
+    // No touch panel: touch and full screen stay off, and the app rail stays visible.
+    g_app.touch_enabled = false;
+    g_app.full_screen = false;
+#endif
     g_app.rotation = 1;
     ESP_LOGI(TAG, "MiniNav starting, free PSRAM %u KB", (unsigned)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) >> 10));
 

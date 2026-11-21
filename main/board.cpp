@@ -648,6 +648,9 @@ static bool cst3530_frame(uint8_t *raw, bool *acked = nullptr) {
 }
 
 static void touch_init(void) {
+#if CONFIG_AAM_BUTTON_NAV
+    return;  // no touch panel on this board: nothing to probe
+#endif
     gpio_config_t io = {};
     io.pin_bit_mask = 1ULL << PIN_TP_INT;
     io.mode = GPIO_MODE_INPUT;
@@ -734,6 +737,34 @@ static void touch_poll(void) {
 // ---- BOOT button -----------------------------------------------------------------------------
 // Single press = day/night, quick double press = touch on/off, hold 1 s = demo.
 // A single press waits 350 ms for a possible second press, so the two never both fire.
+#if CONFIG_AAM_BUTTON_NAV
+// Non-touch board: click = next item, double click = press the focused item, hold 1 s = Home.
+// Same timing as below, so the three never fire together.
+#define KEY_HOME 3
+#define KEY_DPAD_CENTER 23
+static void button_poll(void) {
+    static bool was_down, held, pending;
+    static uint32_t t_down, t_release;
+    bool down = gpio_get_level((gpio_num_t)PIN_BOOT) == 0;
+    uint32_t now = millis();
+    if (down && !was_down) { t_down = now; held = false; }
+    if (down && !held && now - t_down > 1000) { held = true; pending = false; aap_send_key(KEY_HOME); }
+    if (!down && was_down && !held && now - t_down > 30) {
+        if (pending && now - t_release < 350) {
+            pending = false;
+            aap_send_key(KEY_DPAD_CENTER);
+        } else {
+            pending = true;
+            t_release = now;
+        }
+    }
+    if (pending && !down && now - t_release >= 350) {
+        pending = false;
+        aap_send_key(CONFIG_AAM_NAV_NEXT_KEYCODE);
+    }
+    was_down = down;
+}
+#else
 static void button_poll(void) {
     static bool was_down, held, pending;
     static uint32_t t_down, t_release;
@@ -756,6 +787,7 @@ static void button_poll(void) {
     }
     was_down = down;
 }
+#endif
 
 void board_poll_inputs(void) {
     button_poll();

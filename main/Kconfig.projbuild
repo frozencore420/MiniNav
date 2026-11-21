@@ -55,6 +55,21 @@ menu "MiniNav (Android Auto minimap)"
         range 1 8
         default 1
 
+    config AAM_BUTTON_NAV
+        bool "Non-touch display: drive Android Auto with BOOT"
+        default n
+        help
+            For a board without a touch panel. Android Auto gets key presses instead of touches, the
+            app rail stays visible (it is how the launcher is reached), and the touch and full screen
+            settings are off. BOOT: a click moves focus to the next item (see the next key below), a
+            double click presses the focused item, and holding BOOT for 1 s goes to the Home screen.
+
+    config AAM_NAV_NEXT_KEYCODE
+        int "Key sent by a single BOOT click (22 = D-pad right, 20 = D-pad down)"
+        range 1 300
+        default 22
+        depends on AAM_BUTTON_NAV
+
     config AAM_RIGHT_HAND_DRIVE
         bool "Right-hand drive (India, UK, Japan...)"
         default y

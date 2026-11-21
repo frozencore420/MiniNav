@@ -14,6 +14,12 @@
 #define CONFIG_AAM_HIDE_RAIL 0
 #endif
 #define RAIL_PX (80 * CONFIG_AAM_VIDEO_DENSITY / 160)   // 100 px at 200 dpi
+#ifndef CONFIG_AAM_BUTTON_NAV
+#define CONFIG_AAM_BUTTON_NAV 0      // non-touch build: BOOT drives Android Auto (Kconfig)
+#endif
+#ifndef CONFIG_AAM_NAV_NEXT_KEYCODE
+#define CONFIG_AAM_NAV_NEXT_KEYCODE 22
+#endif
 extern volatile int g_video_margin_w;  // margin_width announced to the phone (both sides together)
 extern volatile int g_video_crop_x;    // first column of the 800x480 frame that is shown
 
@@ -77,6 +83,7 @@ void aap_queue_video_ack(void);  // same, sent from a helper task (used by the d
 void aap_request_keyframe(void);
 void aap_restart_session(void);  // polite bye-bye, then reconnect (to apply a new layout)
 void aap_send_touch(int action, int x, int y);  // action: 0 down, 1 up, 2 move; x,y in 800x480
+void aap_send_key(int keycode);                 // a key press (down, then up): non-touch builds
 
 // video.cpp
 void video_start(void);

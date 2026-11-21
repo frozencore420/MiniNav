@@ -357,6 +357,29 @@ void aap_send_touch(int action, int x, int y) {
     send_pb(CH_INPUT, 0x8001, &w);
 }
 
+// Key event on the input channel: InputReport { timestamp = 1, key_event = 2 }, KeyEvent { repeated
+// Key keys = 1 }, Key { keycode = 1, is_down = 2, metastate = 3 }. Same message as touch (id 0x8001).
+static bool send_key_event(int keycode, bool down, int64_t ns) {
+    uint8_t kb[16], kv[24], b[40]; pb_w key, ke, w;
+    pb_init(&key, kb, sizeof kb);
+    pb_varint(&key, 1, keycode);
+    pb_bool(&key, 2, down);
+    pb_varint(&key, 3, 0);
+    pb_init(&ke, kv, sizeof kv);
+    pb_msg(&ke, 1, &key);
+    pb_init(&w, b, sizeof b);
+    pb_varint(&w, 1, (uint64_t)ns);
+    pb_msg(&w, 2, &ke);
+    return send_pb(CH_INPUT, 0x8001, &w);
+}
+
+void aap_send_key(int keycode) {
+    if (!s_alive || g_app.stage < STAGE_VIDEO) return;
+    int64_t ns = esp_timer_get_time() * 1000;
+    send_key_event(keycode, true, ns);
+    send_key_event(keycode, false, ns + 1000000);  // release 1 ms later
+}
+
 void aap_send_video_ack(void) {
     if (!s_alive) return;
     uint8_t b[16]; pb_w w; pb_init(&w, b, sizeof b);
@@ -448,7 +471,7 @@ static void send_service_discovery_response(void) {
     pb_varint(&y, 1, 1);    // _800x480
     pb_varint(&y, 2, 2);    // _30 (the enum has _60 = 1, _30 = 2)
     // Layout: hide the rail while touch is off (it is unreachable then anyway).
-    bool hide_rail = CONFIG_AAM_HIDE_RAIL && g_app.full_screen && !g_app.touch_enabled;
+    bool hide_rail = CONFIG_AAM_HIDE_RAIL && g_app.full_screen && !g_app.touch_enabled && !CONFIG_AAM_BUTTON_NAV;
     int margin = hide_rail ? 160 - RAIL_PX : CONFIG_AAM_VIDEO_MARGIN_W;
     g_video_margin_w = margin;
     g_video_crop_x = margin / 2 + (hide_rail && !CONFIG_AAM_RIGHT_HAND_DRIVE ? RAIL_PX : 0);
@@ -467,11 +490,13 @@ static void send_service_discovery_response(void) {
 
     // input: capacitive touchscreen (CST3530) + a few keys. Field layout from aasdk's newer
     // InputSourceService.proto: keycodes packed, TouchScreen{width, height, type}.
-    pb_init(&y, b, sizeof b); pb_varint(&y, 1, 800); pb_varint(&y, 2, 480); pb_varint(&y, 3, 1);  // CAPACITIVE
     pb_init(&x, a, sizeof a);
-    static const uint8_t keys[] = { 4, 19, 20, 21, 22, 23, 84, 85, 87, 88 };
+    static const uint8_t keys[] = { 3, 4, 19, 20, 21, 22, 23, 84, 85, 87, 88 };  // 3 = HOME, 23 = DPAD_CENTER
     pb_bytes(&x, 1, keys, sizeof keys);  // packed varints (all < 128)
-    pb_msg(&x, 2, &y);
+#if !CONFIG_AAM_BUTTON_NAV
+    pb_init(&y, b, sizeof b); pb_varint(&y, 1, 800); pb_varint(&y, 2, 480); pb_varint(&y, 3, 1);  // CAPACITIVE
+    pb_msg(&x, 2, &y);  // no touchscreen on a non-touch board: keys only
+#endif
     pb_init(&z, c, sizeof c); pb_varint(&z, 1, CH_INPUT); pb_msg(&z, 4, &x);
     pb_msg(&w, 1, &z);
 

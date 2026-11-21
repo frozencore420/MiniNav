@@ -1,0 +1,4 @@
+# Non-touch build: BOOT drives Android Auto (see main/Kconfig.projbuild).
+# Used on top of sdkconfig.defaults:
+#   idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.nontouch" build
+CONFIG_AAM_BUTTON_NAV=y
