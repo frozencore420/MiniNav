@@ -2,3 +2,4 @@
 # Used on top of sdkconfig.defaults:
 #   idf.py -D SDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.nontouch" build
 CONFIG_AAM_BUTTON_NAV=y
+CONFIG_AAM_LOG_MESSAGES=y
