@@ -357,19 +357,21 @@ void aap_send_touch(int action, int x, int y) {
     send_pb(CH_INPUT, 0x8001, &w);
 }
 
-// Key event on the input channel: InputReport { timestamp = 1, key_event = 2 }, KeyEvent { repeated
-// Key keys = 1 }, Key { keycode = 1, is_down = 2, metastate = 3 }. Same message as touch (id 0x8001).
+// Key press on the input channel, per aasdk's InputEventIndication (ButtonEventsData.proto):
+//   InputEventIndication { timestamp = 1; button_event = 4 (ButtonEvents) }
+//   ButtonEvents { repeated ButtonEvent button_events = 1 }
+//   ButtonEvent  { scan_code = 1; is_pressed = 2; meta = 3; long_press = 4 }
 static bool send_key_event(int keycode, bool down, int64_t ns) {
-    uint8_t kb[16], kv[24], b[40]; pb_w key, ke, w;
+    uint8_t kb[16], kl[24], b[48]; pb_w key, list, w;
     pb_init(&key, kb, sizeof kb);
-    pb_varint(&key, 1, keycode);
-    pb_bool(&key, 2, down);
-    pb_varint(&key, 3, 0);
-    pb_init(&ke, kv, sizeof kv);
-    pb_msg(&ke, 1, &key);
+    pb_varint(&key, 1, keycode);      // scan_code
+    pb_bool(&key, 2, down);           // is_pressed
+    pb_varint(&key, 3, 0);            // meta
+    pb_init(&list, kl, sizeof kl);
+    pb_msg(&list, 1, &key);           // repeated button_events
     pb_init(&w, b, sizeof b);
-    pb_varint(&w, 1, (uint64_t)ns);
-    pb_msg(&w, 2, &ke);
+    pb_varint(&w, 1, (uint64_t)ns);   // timestamp
+    pb_msg(&w, 4, &list);             // button_event
     return send_pb(CH_INPUT, 0x8001, &w);
 }
 
