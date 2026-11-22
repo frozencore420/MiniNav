@@ -495,9 +495,14 @@ static void send_service_discovery_response(void) {
     pb_init(&x, a, sizeof a);
     static const uint8_t keys[] = { 3, 4, 19, 20, 21, 22, 23, 84, 85, 87, 88 };  // 3 = HOME, 23 = DPAD_CENTER
     pb_bytes(&x, 1, keys, sizeof keys);  // packed varints (all < 128)
-#if !CONFIG_AAM_BUTTON_NAV
+#if CONFIG_AAM_BUTTON_NAV
+    // Rotary/non-touch: declare a touch_pad_config (InputChannel field 3, InputChannelData.proto),
+    // the same declaration Open Headunit makes when its rotary mode is on. No touch_screen_config.
+    pb_init(&y, b, sizeof b); pb_varint(&y, 1, 800); pb_varint(&y, 2, 480); pb_varint(&y, 3, 1);
+    pb_msg(&x, 3, &y);
+#else
     pb_init(&y, b, sizeof b); pb_varint(&y, 1, 800); pb_varint(&y, 2, 480); pb_varint(&y, 3, 1);  // CAPACITIVE
-    pb_msg(&x, 2, &y);  // no touchscreen on a non-touch board: keys only
+    pb_msg(&x, 2, &y);  // touch_screen_config (field 2)
 #endif
     pb_init(&z, c, sizeof c); pb_varint(&z, 1, CH_INPUT); pb_msg(&z, 4, &x);
     pb_msg(&w, 1, &z);
