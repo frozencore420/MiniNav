@@ -765,8 +765,8 @@ static void button_poll(void) {
     }
     if (pending && !down && now - t_release >= CONFIG_AAM_DOUBLE_CLICK_MS) {
         pending = false;
-        ESP_LOGI(TAG, "BOOT click -> next (keycode %d)", CONFIG_AAM_NAV_NEXT_KEYCODE);
-        aap_send_key(CONFIG_AAM_NAV_NEXT_KEYCODE);
+        ESP_LOGI(TAG, "BOOT click -> wheel step +1");
+        aap_send_wheel(1);
     }
     was_down = down;
 }

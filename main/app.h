@@ -87,6 +87,7 @@ void aap_request_keyframe(void);
 void aap_restart_session(void);  // polite bye-bye, then reconnect (to apply a new layout)
 void aap_send_touch(int action, int x, int y);  // action: 0 down, 1 up, 2 move; x,y in 800x480
 void aap_send_key(int keycode);                 // a key press (down, then up): non-touch builds
+void aap_send_wheel(int delta);                // a scroll-wheel step (+1 / -1): ButtonCode.SCROLL_WHEEL
 
 // video.cpp
 void video_start(void);

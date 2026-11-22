@@ -382,6 +382,25 @@ void aap_send_key(int keycode) {
     send_key_event(keycode, false, ns + 1000000);  // release 1 ms later
 }
 
+// Scroll-wheel step, as openauto sends it (InputEventIndication.relative_input_event = 6):
+//   RelativeInputEvents { repeated RelativeInputEvent relative_input_events = 1 }
+//   RelativeInputEvent  { scan_code = 1; delta = 2 }
+// scan_code 65536 is ButtonCode.SCROLL_WHEEL (ButtonCodeEnum.proto).
+void aap_send_wheel(int delta) {
+    if (!s_alive || g_app.stage < STAGE_VIDEO) return;
+    uint8_t ke[16], kl[24], b[40]; pb_w ev, list, w;
+    pb_init(&ev, ke, sizeof ke);
+    pb_varint(&ev, 1, 65536);         // scan_code = SCROLL_WHEEL
+    pb_int(&ev, 2, delta);            // +1 or -1 per detent
+    pb_init(&list, kl, sizeof kl);
+    pb_msg(&list, 1, &ev);
+    pb_init(&w, b, sizeof b);
+    pb_varint(&w, 1, (uint64_t)(esp_timer_get_time() * 1000));  // timestamp
+    pb_msg(&w, 6, &list);             // relative_input_event
+    send_pb(CH_INPUT, 0x8001, &w);
+    ESP_LOGI(TAG, "wheel step %+d sent", delta);
+}
+
 void aap_send_video_ack(void) {
     if (!s_alive) return;
     uint8_t b[16]; pb_w w; pb_init(&w, b, sizeof b);
