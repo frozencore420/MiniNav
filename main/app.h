@@ -17,6 +17,9 @@
 #ifndef CONFIG_AAM_BUTTON_NAV
 #define CONFIG_AAM_BUTTON_NAV 0      // non-touch build: BOOT drives Android Auto (Kconfig)
 #endif
+#ifndef CONFIG_AAM_DOUBLE_CLICK_MS
+#define CONFIG_AAM_DOUBLE_CLICK_MS 400
+#endif
 #ifndef CONFIG_AAM_NAV_NEXT_KEYCODE
 #define CONFIG_AAM_NAV_NEXT_KEYCODE 22
 #endif

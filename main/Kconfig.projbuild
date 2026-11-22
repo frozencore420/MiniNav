@@ -70,6 +70,12 @@ menu "MiniNav (Android Auto minimap)"
         default 22
         depends on AAM_BUTTON_NAV
 
+    config AAM_DOUBLE_CLICK_MS
+        int "BOOT double-click window (ms): two clicks this close together count as a double click"
+        range 200 1000
+        default 400
+        depends on AAM_BUTTON_NAV
+
     config AAM_RIGHT_HAND_DRIVE
         bool "Right-hand drive (India, UK, Japan...)"
         default y

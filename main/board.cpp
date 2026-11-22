@@ -739,7 +739,7 @@ static void touch_poll(void) {
 // A single press waits 350 ms for a possible second press, so the two never both fire.
 #if CONFIG_AAM_BUTTON_NAV
 // Non-touch board: click = next item, double click = press the focused item, hold 1 s = Home.
-// Same timing as below, so the three never fire together.
+// A click is only sent once the double-click window has passed, so a double click never sends two.
 #define KEY_HOME 3
 #define KEY_DPAD_CENTER 23
 static void button_poll(void) {
@@ -748,18 +748,24 @@ static void button_poll(void) {
     bool down = gpio_get_level((gpio_num_t)PIN_BOOT) == 0;
     uint32_t now = millis();
     if (down && !was_down) { t_down = now; held = false; }
-    if (down && !held && now - t_down > 1000) { held = true; pending = false; aap_send_key(KEY_HOME); }
+    if (down && !held && now - t_down > 1000) {
+        held = true; pending = false;
+        ESP_LOGI(TAG, "BOOT hold -> Home");
+        aap_send_key(KEY_HOME);
+    }
     if (!down && was_down && !held && now - t_down > 30) {
-        if (pending && now - t_release < 350) {
+        if (pending && now - t_release < CONFIG_AAM_DOUBLE_CLICK_MS) {
             pending = false;
+            ESP_LOGI(TAG, "BOOT double click -> select");
             aap_send_key(KEY_DPAD_CENTER);
         } else {
             pending = true;
             t_release = now;
         }
     }
-    if (pending && !down && now - t_release >= 350) {
+    if (pending && !down && now - t_release >= CONFIG_AAM_DOUBLE_CLICK_MS) {
         pending = false;
+        ESP_LOGI(TAG, "BOOT click -> next (keycode %d)", CONFIG_AAM_NAV_NEXT_KEYCODE);
         aap_send_key(CONFIG_AAM_NAV_NEXT_KEYCODE);
     }
     was_down = down;

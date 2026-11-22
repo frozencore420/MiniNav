@@ -862,6 +862,15 @@ static void say_goodbye(void) {
     ESP_LOGW(TAG, "bye-bye sent, no answer");
 }
 
+// The head unit keeps the link alive itself: a ping the phone answers. Without it a static
+// home screen can leave the phone silent long enough for the session to be dropped.
+static void send_ping(void) {
+    uint8_t b[16]; pb_w w; pb_init(&w, b, sizeof b);
+    pb_int(&w, 1, esp_timer_get_time() / 1000);   // timestamp in ms
+    send_pb(CH_CONTROL, MSG_PING_REQUEST, &w);
+    ESP_LOGI(TAG, "ping sent");
+}
+
 static void run_session(void) {
     s_encrypted = false;
     s_alive = true;
@@ -875,13 +884,20 @@ static void run_session(void) {
     if (!version_exchange() || !tls_handshake()) return;
     g_app.error[0] = 0;
 
+    int64_t last_rx = esp_timer_get_time();
     while (!s_bye) {
         frame_hdr h;
-        if (!read_frame(&h, 20000)) {
-            if (g_app.stage < STAGE_VIDEO) app_set_error("Phone went quiet");
-            else app_set_error("Connection lost");
-            break;
+        if (!read_frame(&h, 5000)) {
+            // 5 s of silence: ping the phone. Only give up after 20 s with nothing from it.
+            if (esp_timer_get_time() - last_rx > 20000000LL) {
+                if (g_app.stage < STAGE_VIDEO) app_set_error("Phone went quiet");
+                else app_set_error("Connection lost");
+                break;
+            }
+            send_ping();
+            continue;
         }
+        last_rx = esp_timer_get_time();
         esp_task_wdt_reset();
         g_aap_frames++;
         if (h.ch >= NCH) { ESP_LOGW(TAG, "frame on channel %d ignored", h.ch); continue; }
