@@ -512,8 +512,10 @@ static void send_service_discovery_response(void) {
     // input: capacitive touchscreen (CST3530) + a few keys. Field layout from aasdk's newer
     // InputSourceService.proto: keycodes packed, TouchScreen{width, height, type}.
     pb_init(&x, a, sizeof a);
-    static const uint8_t keys[] = { 3, 4, 19, 20, 21, 22, 23, 84, 85, 87, 88 };  // 3 = HOME, 23 = DPAD_CENTER
-    pb_bytes(&x, 1, keys, sizeof keys);  // packed varints (all < 128)
+    // Keycodes, one varint each (repeated uint32 supported_keycodes = 1). 280-283 are the rotary
+    // nudge codes (KEYCODE_SYSTEM_NAVIGATION_UP/DOWN/LEFT/RIGHT); they need two-byte varints.
+    static const uint32_t keys[] = { 3, 4, 19, 20, 21, 22, 23, 84, 85, 87, 88, 280, 281, 282, 283 };
+    for (size_t i = 0; i < sizeof keys / sizeof keys[0]; i++) pb_varint(&x, 1, keys[i]);
     // touch_screen_config (field 2): announced on every build, as Open Headunit does.
     pb_init(&y, b, sizeof b); pb_varint(&y, 1, 800); pb_varint(&y, 2, 480); pb_varint(&y, 3, 1);  // CAPACITIVE
     pb_msg(&x, 2, &y);
